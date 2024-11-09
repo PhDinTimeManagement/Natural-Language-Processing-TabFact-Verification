@@ -1,5 +1,5 @@
 Github Repository:
 https://github.com/microsoft/Table-Pretraining
 
-Community Implementation:
+Research Seminar Recording:
 https://www.catalyzex.com/paper/tapex-table-pre-training-via-learning-a/code
