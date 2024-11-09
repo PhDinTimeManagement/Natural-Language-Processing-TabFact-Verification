@@ -1,0 +1,8 @@
+Github Repository:
+https://github.com/luka-group/salience-aware-learning
+
+ACL Anthology:
+https://aclanthology.org/2021.findings-emnlp.338/
+
+Conference Recording:
+https://aclanthology.org/2021.findings-emnlp.338.mp4

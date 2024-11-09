@@ -1,0 +1,5 @@
+Github Repository:
+https://github.com/wenhuchen/Table-Fact-Checking
+
+Community Implementation:
+https://www.catalyzex.com/paper/tabfact-a-large-scale-dataset-for-table-based/code
