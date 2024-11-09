@@ -1,5 +1,5 @@
 Github Repository:
-https://github.com/luka-group/salience-aware-learning
+https://github.com/qshi95/LERGV
 
 ACL Anthology:
 https://aclanthology.org/2021.emnlp-main.16/
