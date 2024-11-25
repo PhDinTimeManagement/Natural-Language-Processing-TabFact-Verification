@@ -1,8 +1,0 @@
-Github Repository:
-https://github.com/arielsho/Program-Enhanced-Table-Fact-Checking
-
-ACL Anthology:
-https://aclanthology.org/2020.emnlp-main.628/
-
-Research Seminar Recording:
-https://slideslive.com/38939180/program-enhanced-fact-verification-with-verbalization-and-graph-attention-network

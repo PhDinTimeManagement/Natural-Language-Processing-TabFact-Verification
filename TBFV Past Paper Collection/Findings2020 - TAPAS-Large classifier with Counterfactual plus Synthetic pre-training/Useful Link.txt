@@ -1,8 +1,0 @@
-Github Repository:
-https://github.com/google-research/tapas
-
-ACL Anthology:
-https://aclanthology.org/2020.findings-emnlp.27/
-
-Research Seminar Recording:
-https://slideslive.com/38940134/understanding-tables-with-intermediate-pretraining

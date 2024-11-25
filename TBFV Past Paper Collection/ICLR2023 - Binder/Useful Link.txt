@@ -1,5 +1,0 @@
-Github Repository (Official):
-https://github.com/xlang-ai/Binder
-
-Other Implementation in GitHub:
-https://github.com/parkervg/blendsql

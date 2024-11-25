@@ -1,2 +1,0 @@
-Github Repository:
-https://paperswithcode.com/sota/table-based-fact-verification-on-tabfact

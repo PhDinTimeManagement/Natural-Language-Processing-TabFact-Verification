@@ -1,8 +1,0 @@
-GitHub Repository:
-https://github.com/zhhongzhi/sat4table
-
-ACL Anthology:
-https://aclanthology.org/2020.emnlp-main.126/
-
-Research Seminar Recording:
-https://slideslive.com/38938841/table-fact-verification-with-structureaware-transformer

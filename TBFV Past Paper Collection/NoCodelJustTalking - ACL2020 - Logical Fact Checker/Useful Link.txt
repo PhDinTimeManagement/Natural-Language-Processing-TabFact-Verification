@@ -1,5 +1,0 @@
-ACL Anthology:
-https://aclanthology.org/2020.acl-main.539/
-
-Research Seminar Recording:
-https://slideslive.com/38928864/logicalfactchecker-leveraging-logical-operations-for-fact-checking-with-graph-module-network

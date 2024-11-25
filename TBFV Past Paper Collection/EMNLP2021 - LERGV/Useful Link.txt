@@ -1,8 +1,0 @@
-Github Repository:
-https://github.com/qshi95/LERGV
-
-ACL Anthology:
-https://aclanthology.org/2021.emnlp-main.16/
-
-Research Seminar Recording:
-https://aclanthology.org/2021.emnlp-main.16.mp4
