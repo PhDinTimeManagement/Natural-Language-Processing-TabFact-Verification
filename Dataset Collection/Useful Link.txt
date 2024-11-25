@@ -1,7 +1,0 @@
-TabFact:
-https://tabfact.github.io/
-
-
-WikiTableQuestions (Semantic Parsing):
-https://ppasupat.github.io/WikiTableQuestions/
-https://github.com/ppasupat/WikiTableQuestions/releases
