@@ -334,7 +334,7 @@ def main():
                         type=str,
                         help="The direction of linearizing table cells.")
     parser.add_argument("--data_dir",
-                        default="../processed_datasets",
+                        default="../dataset",
                         type=str,
                         help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
     parser.add_argument("--output_dir",
