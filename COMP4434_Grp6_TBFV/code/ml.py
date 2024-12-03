@@ -6,16 +6,33 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sentence_transformers import SentenceTransformer
+import re
 
 # Load the TSV data
 data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
 data = pd.read_csv(data_path, sep='\t', header=None).values
 
+# Clean 'row x is:' in table
+def clean_out_sub_table(tsv_data):
+    table_texts_first = [" ".join(row[2:-2]) for row in tsv_data]
+    table_texts_second = [re.sub(r'\. (.*?) :', ',', row) for row in table_texts_first]
+    print(table_texts_second[0])
+    table_texts_final = []
+
+    for row in table_texts_second:
+        intermediate = row.split(" : ")
+        if len(intermediate) > 1:
+            table_texts_final.append(intermediate[1])
+        else:
+            table_texts_final.append(intermediate[0])
+
+    return table_texts_final
+
 # Convert data into required format
 def preprocess_tsv_data(tsv_data):
     # Concatenate table-related columns into a single string for each row
     # Starting from column 3
-    table_texts = [" ".join(row[3:-2]) for row in tsv_data]
+    table_texts = clean_out_sub_table(tsv_data)
     statements = tsv_data[:, -2]
     labels = tsv_data[:, -1].astype(int)
     return table_texts, statements, labels
