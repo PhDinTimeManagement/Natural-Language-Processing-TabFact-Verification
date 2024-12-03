@@ -2,11 +2,14 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
-from transformers import BertModel, BertTokenizer
+from sentence_transformers import SentenceTransformer
 import re
+from transformers import BertModel, BertTokenizer
 
 # Load the TSV data
 data_path = '../processed_datasets/tsv_data_horizontal/complex_test.tsv'
@@ -16,6 +19,7 @@ data = pd.read_csv(data_path, sep='\t', header=None).values
 def clean_out_sub_table(tsv_data):
     table_texts_first = [" ".join(row[2:-2]) for row in tsv_data]
     table_texts_second = [re.sub(r'\. (.*?) :', ',', row) for row in table_texts_first]
+    # print(table_texts_second[0])
     table_texts_final = []
 
     for row in table_texts_second:
@@ -29,77 +33,111 @@ def clean_out_sub_table(tsv_data):
 
 # Convert data into required format
 def preprocess_tsv_data(tsv_data):
+    # Concatenate table-related columns into a single string for each row
+    # Starting from column 3
     table_texts = clean_out_sub_table(tsv_data)
     statements = tsv_data[:, -2]
     labels = tsv_data[:, -1].astype(int)
     return table_texts, statements, labels
 
-# Define a function to extract features for each transaction using [CLS] token
-def extract_features_batch(texts, tokenizer, model):
-    encoded_inputs = tokenizer.batch_encode_plus(
-        texts,
-        add_special_tokens=True,
-        truncation=True,
-        padding=True,
-        max_length=512,
-        return_tensors="pt"
-    )
-    input_ids = encoded_inputs["input_ids"]
-    attention_mask = encoded_inputs["attention_mask"]
-
+# Define a function to extract features for each transaction
+def extract_features(text):
+    # Tokenize the text
+    input_ids = torch.tensor([tokenizer.encode(text, add_special_tokens=True, max_length=512, truncation=True)])
+    # Get the hidden states for each token
     with torch.no_grad():
-        outputs = model(input_ids, attention_mask=attention_mask)
-        hidden_states = outputs.hidden_states  # Access hidden states
-    # Take mean of the last 4 hidden states for [CLS]
-    features = torch.mean(torch.stack(hidden_states[-4:]), dim=0)[:, 0, :]  # [CLS] token
-    return features
+        outputs = model(input_ids)
+        hidden_states = outputs[2]
+    # Concatenate the last 4 hidden states
+    token_vecs = []
+    for layer in range(-4, 0):
+        token_vecs.append(hidden_states[layer][0])
+    # Calculate the mean of the last 4 hidden states
+    features = []
+    for token in token_vecs:
+        features.append(torch.mean(token, dim=0))
+    # Return the features as a tensor
+    return torch.stack(features)
+
+# Preprocess the TSV data and convert into data frame
+table_texts, statements, labels = preprocess_tsv_data(data)
+combined = np.column_stack((table_texts, statements, labels))
+df = pd.DataFrame(combined, columns=['Table_texts', 'Statement', 'Labels'])
 
 # Preprocess the TSV data
 table_texts, statements, labels = preprocess_tsv_data(data)
 
-# Convert data into a dataframe
-df = pd.DataFrame({"Table_texts": table_texts, "Statements": statements, "Labels": labels})
+# Print a sample test case
+# print("Sample table text:", table_texts[0])
+# print("Sample statement:", statements[0])
+# print("Sample label:", labels[0])
 
-# Load the pre-trained BERT model and tokenizer
+# # TF-IDF representation
+# vectorizer = TfidfVectorizer(max_features=500)
+# table_features = vectorizer.fit_transform(table_texts)
+# statement_features = vectorizer.transform(statements)
+# # Combine features by calculating similarity
+# similarities = cosine_similarity(table_features, statement_features)
+
+# model_sentence_transformer = SentenceTransformer('bert-base-nli-mean-tokens')
+# # Generate embeddings for table and statements
+# table_embeddings = model_sentence_transformer.encode(table_texts)
+# statement_embeddings = model_sentence_transformer.encode(statements)
+# similarities = cosine_similarity(table_embeddings, statement_embeddings)
+
+
+#Load the pre-trained BERT model and tokenizer
 model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-# Extract features for the table and statement texts
-print("Extracting features from table texts...")
-table_features = extract_features_batch(df["Table_texts"].tolist(), tokenizer, model)
+# Extract features for each transaction
+table_features = []
+statement_features = []
 
-print("Extracting features from statements...")
-statement_features = extract_features_batch(df["Statements"].tolist(), tokenizer, model)
+for i in range(len(df)):
+    feature_instance = extract_features(df.iloc[i]["Table_texts"])
+    table_features.append(feature_instance)
 
-# Calculate cosine similarities
-print("Calculating cosine similarities...")
-cosine_similarities = torch.nn.functional.cosine_similarity(
-    table_features, statement_features, dim=1
-).cpu().numpy()  # Convert to numpy array
+for i in range(len(df)):
+    feature_statement_instance = extract_features(df.iloc[i]["Statement"])
+    statement_features.append(feature_statement_instance)
 
-# Prepare labels as numpy array
-labels = np.array(labels)
+# Concatenate the features and convert to a numpy array
+table_features = torch.cat(table_features).numpy()
+statement_features = torch.cat(statement_features).numpy()
 
-# Split into train and test datasets
-X_train, X_test, y_train, y_test = train_test_split(
-    cosine_similarities.reshape(-1, 1), labels, test_size=0.2, random_state=42
-)
+# Assume `table_features` and `statement_features` are tensors (not numpy arrays)
+cosine_similarities = []
+for table_feature, statement_feature in zip(table_features, statement_features):
+    # Calculate cosine similarity using PyTorch
+    similarity = torch.nn.functional.cosine_similarity(
+        torch.tensor(table_feature).unsqueeze(0),
+        torch.tensor(statement_feature).unsqueeze(0)
+    )
+    cosine_similarities.append(similarity.item())
 
-# K-Fold cross-validation
+# `cosine_similarities` contains the similarity values for each instance
+print("Cosine Similarities:", cosine_similarities)
+
+# #Print the feature tensor
+# print(table_features)
+# print(statement_features)
+
+# Prepare training and testing data
+X_train, X_test, y_train, y_test = train_test_split(cosine_similarities, labels, test_size=0.2, random_state=42)
+
+# K-fold cross-validation
 k = 10
 kf = KFold(n_splits=k, shuffle=True, random_state=42)
 
 accuracies = []
 
-print(f"Performing {k}-fold cross-validation...")
-for fold, (train_index, test_index) in enumerate(kf.split(cosine_similarities)):
-    # Prepare training and testing data
-    X_train = cosine_similarities[train_index].reshape(-1, 1)
-    X_test = cosine_similarities[test_index].reshape(-1, 1)
-    y_train = labels[train_index]
-    y_test = labels[test_index]
+# Perfrom k-fold cross-validation
+for train_index, test_index in kf.split(cosine_similarities):
+    X_train, X_test = cosine_similarities[train_index], cosine_similarities[test_index]
+    y_train, y_test = labels[train_index], labels[test_index]
 
-    # Train a logistic regression model
+    # Train a simple logistic regression model
     model = LogisticRegression()
     model.fit(X_train, y_train)
 
@@ -107,8 +145,9 @@ for fold, (train_index, test_index) in enumerate(kf.split(cosine_similarities)):
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     accuracies.append(accuracy)
-    print(f"Fold {fold + 1} Accuracy: {accuracy:.2f}")
+    print(f"Fold Accuracy: {accuracy:.2f}")
+
 
 # Calculate the average accuracy
 average_accuracy = sum(accuracies) / k
-print(f"Average Accuracy across {k} folds: {average_accuracy:.2f}")
+print(f"Average Accuracy across {k} folders: {average_accuracy:.2f}")
