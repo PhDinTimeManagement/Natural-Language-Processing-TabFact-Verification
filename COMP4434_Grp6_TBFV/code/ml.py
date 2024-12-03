@@ -37,6 +37,32 @@ def preprocess_tsv_data(tsv_data):
     labels = tsv_data[:, -1].astype(int)
     return table_texts, statements, labels
 
+
+# Define a function to extract features for each transaction
+def extract_features(text):
+
+    # Tokenize the text
+    input_ids = torch.tensor([tokenizer.encode(text, add_special_tokens=True, max_length=512, truncation=True)])
+    # Get the hidden states for each token
+    with torch.no_grad():
+        outputs = model(input_ids)
+        hidden_states = outputs[2]
+    # Concatenate the last 4 hidden states
+    token_vecs = []
+    for layer in range(-4, 0):
+        token_vecs.append(hidden_states[layer][0])
+    # Calculate the mean of the last 4 hidden states
+    features = []
+    for token in token_vecs:
+        features.append(torch.mean(token, dim=0))
+    # Return the features as a tensor
+    return torch.stack(features)
+
+# Preprocess the TSV data and convert into data frame
+table_texts, statements, labels = preprocess_tsv_data(data)
+combined = np.column_stack((table_texts, statements, labels))
+df = pd.DataFrame(combined, columns=['Table_texts', 'Statement', 'Labels'])
+
 # Preprocess the TSV data
 table_texts, statements, labels = preprocess_tsv_data(data)
 
@@ -57,6 +83,30 @@ similarities = cosine_similarity(table_features, statement_features)
 # table_embeddings = model_sentence_transformer.encode(table_texts)
 # statement_embeddings = model_sentence_transformer.encode(statements)
 # similarities = cosine_similarity(table_embeddings, statement_embeddings)
+
+
+#Load the pre-trained BERT model and tokenizer
+model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+# Extract features for each transaction
+table_features = []
+statement_features = []
+
+for i in range(len(df)):
+    feature_instance = extract_features(df.iloc[i]["Table_texts"])
+    feature_statement_instance = extract_features(df.iloc[i]["Statement"])
+    table_features.append(feature_instance)
+    statement_features.append(feature_statement_instance)
+    print(feature_instance)
+    print(feature_statement_instance)
+# Concatenate the features and convert to a numpy array
+table_features = torch.cat(table_features).numpy()
+statement_features = torch.cat(statement_features).numpy()
+
+#Print the feature tensor
+print(table_features)
+print(statement_features)
 
 
 # Prepare training and testing data
