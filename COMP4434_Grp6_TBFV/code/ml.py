@@ -1,20 +1,21 @@
-import numpy as np
 import pandas as pd
-import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
-from sentence_transformers import SentenceTransformer
 import re
-from transformers import BertModel, BertTokenizer
+from sklearn.linear_model import Lasso
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
 
 # Load the TSV data
 data_path = '../processed_datasets/tsv_data_horizontal/complex_test.tsv'
 data = pd.read_csv(data_path, sep='\t', header=None).values
 
+
+#-----------------Data Preprocessing-----------------
 # Clean 'row x is:' in table
 def clean_out_sub_table(tsv_data):
     table_texts_first = [" ".join(row[2:-2]) for row in tsv_data]
@@ -40,114 +41,80 @@ def preprocess_tsv_data(tsv_data):
     labels = tsv_data[:, -1].astype(int)
     return table_texts, statements, labels
 
-# Define a function to extract features for each transaction
-def extract_features(text):
-    # Tokenize the text
-    input_ids = torch.tensor([tokenizer.encode(text, add_special_tokens=True, max_length=512, truncation=True)])
-    # Get the hidden states for each token
-    with torch.no_grad():
-        outputs = model(input_ids)
-        hidden_states = outputs[2]
-    # Concatenate the last 4 hidden states
-    token_vecs = []
-    for layer in range(-4, 0):
-        token_vecs.append(hidden_states[layer][0])
-    # Calculate the mean of the last 4 hidden states
-    features = []
-    for token in token_vecs:
-        features.append(torch.mean(token, dim=0))
-    # Return the features as a tensor
-    return torch.stack(features)
-
-# Preprocess the TSV data and convert into data frame
-table_texts, statements, labels = preprocess_tsv_data(data)
-combined = np.column_stack((table_texts, statements, labels))
-df = pd.DataFrame(combined, columns=['Table_texts', 'Statement', 'Labels'])
-
 # Preprocess the TSV data
 table_texts, statements, labels = preprocess_tsv_data(data)
 
 # Print a sample test case
-# print("Sample table text:", table_texts[0])
-# print("Sample statement:", statements[0])
-# print("Sample label:", labels[0])
-
-# # TF-IDF representation
-# vectorizer = TfidfVectorizer(max_features=500)
-# table_features = vectorizer.fit_transform(table_texts)
-# statement_features = vectorizer.transform(statements)
-# # Combine features by calculating similarity
-# similarities = cosine_similarity(table_features, statement_features)
-
-# model_sentence_transformer = SentenceTransformer('bert-base-nli-mean-tokens')
-# # Generate embeddings for table and statements
-# table_embeddings = model_sentence_transformer.encode(table_texts)
-# statement_embeddings = model_sentence_transformer.encode(statements)
-# similarities = cosine_similarity(table_embeddings, statement_embeddings)
+print("Sample table text:", table_texts[0])
+print("Sample statement:", statements[0])
+print("Sample label:", labels[0])
 
 
-#Load the pre-trained BERT model and tokenizer
-model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+#-----------------TF-IDF Feature Extraction-----------------
+vectorizer = TfidfVectorizer(max_features=500)
+table_features = vectorizer.fit_transform(table_texts)
+statement_features = vectorizer.transform(statements)
+# Combine features by calculating similarity
+similarities = cosine_similarity(table_features, statement_features)
 
-# Extract features for each transaction
-table_features = []
-statement_features = []
 
-for i in range(len(df)):
-    feature_instance = extract_features(df.iloc[i]["Table_texts"])
-    table_features.append(feature_instance)
-
-for i in range(len(df)):
-    feature_statement_instance = extract_features(df.iloc[i]["Statement"])
-    statement_features.append(feature_statement_instance)
-
-# Concatenate the features and convert to a numpy array
-table_features = torch.cat(table_features).numpy()
-statement_features = torch.cat(statement_features).numpy()
-
-# Assume `table_features` and `statement_features` are tensors (not numpy arrays)
-cosine_similarities = []
-for table_feature, statement_feature in zip(table_features, statement_features):
-    # Calculate cosine similarity using PyTorch
-    similarity = torch.nn.functional.cosine_similarity(
-        torch.tensor(table_feature).unsqueeze(0),
-        torch.tensor(statement_feature).unsqueeze(0)
-    )
-    cosine_similarities.append(similarity.item())
-
-# `cosine_similarities` contains the similarity values for each instance
-print("Cosine Similarities:", cosine_similarities)
-
-# #Print the feature tensor
-# print(table_features)
-# print(statement_features)
-
+#-----------------Prepare training and testing data-----------------
 # Prepare training and testing data
-X_train, X_test, y_train, y_test = train_test_split(cosine_similarities, labels, test_size=0.2, random_state=42)
-
-# K-fold cross-validation
-k = 10
-kf = KFold(n_splits=k, shuffle=True, random_state=42)
-
-accuracies = []
-
-# Perfrom k-fold cross-validation
-for train_index, test_index in kf.split(cosine_similarities):
-    X_train, X_test = cosine_similarities[train_index], cosine_similarities[test_index]
-    y_train, y_test = labels[train_index], labels[test_index]
-
-    # Train a simple logistic regression model
-    model = LogisticRegression()
-    model.fit(X_train, y_train)
-
-    # Evaluate the model
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    accuracies.append(accuracy)
-    print(f"Fold Accuracy: {accuracy:.2f}")
+X_train, X_test, y_train, y_test = train_test_split(similarities, labels, test_size=0.2, random_state=42)
 
 
-# Calculate the average accuracy
-average_accuracy = sum(accuracies) / k
-print(f"Average Accuracy across {k} folders: {average_accuracy:.2f}")
+#-----------------Cross-Validation Function-----------------
+def cross_validate_model(model, X, y, k=5, is_regression=False):
+    """
+    Perform K-Fold Cross-Validation for a given model.
+
+    Parameters:
+    model: The machine learning model (e.g., LogisticRegression, Lasso, SVC).
+    X: Feature matrix.
+    y: Labels.
+    k: Number of folds (default is 5).
+    is_regression: Whether the model is a regression model (default is False).
+
+    Returns:
+    average_accuracy: The average accuracy across all folds.
+    """
+    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    accuracies = []
+
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        model.fit(X_train, y_train)  # Train the model
+        y_pred = model.predict(X_test)  # Predict on test data
+
+        # If regression, convert predictions to discrete labels
+        if is_regression:
+            y_pred = np.round(y_pred).astype(int)
+
+        accuracy = accuracy_score(y_test, y_pred)
+        accuracies.append(accuracy)
+        print(f"Fold Accuracy: {accuracy:.2f}")
+
+    average_accuracy = sum(accuracies) / k
+    return average_accuracy
+
+#-----------------Logistic Regression Cross-Validation-----------------
+print("\nLogistic Regression Cross-Validation:")
+logistic_model = LogisticRegression()
+logistic_avg_accuracy = cross_validate_model(logistic_model, similarities, labels, k=5)
+print(f"Average Accuracy for Logistic Regression: {logistic_avg_accuracy:.2f}")
+
+
+#-----------------Lasso Regression-----------------
+# Train a Lasso Regression model
+print("\nLasso Regression Cross-Validation:")
+lasso_model = Lasso(alpha=0.1)
+lasso_avg_accuracy = cross_validate_model(lasso_model, similarities, labels, k=5, is_regression=True)
+print(f"Average Accuracy for Lasso Regression: {lasso_avg_accuracy:.2f}")
+
+#-----------------Decision Tree Cross-Validation-----------------
+print("\nDecision Tree Cross-Validation:")
+decision_tree_model = DecisionTreeClassifier(random_state=42)
+decision_tree_avg_accuracy = cross_validate_model(decision_tree_model, similarities, labels, k=5)
+print(f"Average Accuracy for Decision Tree: {decision_tree_avg_accuracy:.2f}")
