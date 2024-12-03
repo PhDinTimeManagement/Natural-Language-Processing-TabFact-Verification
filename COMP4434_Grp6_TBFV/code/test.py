@@ -12,7 +12,7 @@ import re
 from transformers import BertModel, BertTokenizer
 
 # Load the TSV data
-data_path = '../processed_datasets/tsv_data_horizontal/complex_test.tsv'
+data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
 data = pd.read_csv(data_path, sep='\t', header=None).values
 
 # Clean 'row x is:' in table

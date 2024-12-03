@@ -12,7 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
 # Load the TSV data
-data_path = '../processed_datasets/tsv_data_horizontal/complex_test.tsv'
+data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
 data = pd.read_csv(data_path, sep='\t', header=None).values
 
 
