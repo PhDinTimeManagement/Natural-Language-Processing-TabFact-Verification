@@ -2,14 +2,13 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 import re
 from sklearn.linear_model import Lasso
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+from gensim.models import Word2Vec
 
 # Load the TSV data
 data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
@@ -51,12 +50,53 @@ print("Sample statement:", statements[0])
 print("Sample label:", labels[0])
 
 
-#-----------------TF-IDF Feature Extraction-----------------
+#-----------------TF-IDF Feature Extraction -----------------
 vectorizer = TfidfVectorizer(max_features=500)
 table_features = vectorizer.fit_transform(table_texts)
 statement_features = vectorizer.transform(statements)
+
+
+#-----------------Cosine Similarity Calculation-----------------
 # Combine features by calculating similarity
 similarities = cosine_similarity(table_features, statement_features)
+
+
+# # -----------------Word2Vec Embedding Training-----------------
+# # Preprocess table_texts and statements into tokenized lists
+# tokenized_table_texts = [text.split() for text in table_texts]
+# tokenized_statements = [text.split() for text in statements]
+#
+# # Train a Word2Vec model
+# w2v_model = Word2Vec(sentences=tokenized_table_texts + tokenized_statements, vector_size=50, window=5, min_count=1, workers=4)
+#
+#
+# # -----------------Feature Extraction with Word2Vec-----------------
+# def get_average_word2vec(texts, model, vector_size):
+#     """
+#     Convert each text into a vector by averaging the Word2Vec embeddings of its words.
+#
+#     Parameters:
+#     texts: List of tokenized texts.
+#     model: Trained Word2Vec model.
+#     vector_size: Size of the word embeddings.
+#
+#     Returns:
+#     Array of vectors representing each text.
+#     """
+#     features = np.zeros((len(texts), vector_size))
+#     for i, tokens in enumerate(texts):
+#         word_vectors = [model.wv[word] for word in tokens if word in model.wv]
+#         if word_vectors:
+#             features[i] = np.mean(word_vectors, axis=0)  # Average embeddings
+#     return features
+#
+# # Generate Word2Vec features for tables and statements
+# table_features_w2v = get_average_word2vec(tokenized_table_texts, w2v_model, vector_size=50)
+# statement_features_w2v = get_average_word2vec(tokenized_statements, w2v_model, vector_size=50)
+#
+# # -----------------Feature Combination-----------------
+# # Combine table and statement features
+# similarities = np.hstack([table_features_w2v, statement_features_w2v])
 
 
 #-----------------Prepare training and testing data-----------------
@@ -101,26 +141,12 @@ def cross_validate_model(model, X, y, k=5, is_regression=False):
     return average_accuracy
 
 
-#-----------------Logistic Regression Cross-Validation-----------------
-print("\nLogistic Regression Cross-Validation:")
-logistic_model = LogisticRegression()
-logistic_avg_accuracy = cross_validate_model(logistic_model, similarities, labels, k=5)
-print(f"Average Accuracy for Logistic Regression: {logistic_avg_accuracy:.2f}")
-
-
 #-----------------Lasso Regression-----------------
 # Train a Lasso Regression model
 print("\nLasso Regression Cross-Validation:")
 lasso_model = Lasso(alpha=0.1)
 lasso_avg_accuracy = cross_validate_model(lasso_model, similarities, labels, k=5, is_regression=True)
 print(f"Average Accuracy for Lasso Regression: {lasso_avg_accuracy:.2f}")
-
-
-#-----------------Decision Tree Cross-Validation-----------------
-print("\nDecision Tree Cross-Validation:")
-decision_tree_model = DecisionTreeClassifier(random_state=42)
-decision_tree_avg_accuracy = cross_validate_model(decision_tree_model, similarities, labels, k=5)
-print(f"Average Accuracy for Decision Tree: {decision_tree_avg_accuracy:.2f}")
 
 
 #-----------------Support Vector Machine-----------------
@@ -130,8 +156,8 @@ svm_avg_accuracy = cross_validate_model(svm_model, similarities, labels, k=5)
 print(f"Average Accuracy for Support Vector Machine: {svm_avg_accuracy:.2f}")
 
 
-#-----------------Random Forest-----------------
-print("\nRandom Forest Cross-Validation:")
-random_forest_model = RandomForestClassifier(random_state=42)
-random_forest_avg_accuracy = cross_validate_model(random_forest_model, similarities, labels, k=5)
-print(f"Average Accuracy for Random Forest: {random_forest_avg_accuracy:.2f}")
+#-----------------Decision Tree Classifier-----------------
+print("\nDecision Tree Classifier Cross-Validation:")
+dt_model = DecisionTreeClassifier()
+dt_avg_accuracy = cross_validate_model(dt_model, similarities, labels, k=5)
+print(f"Average Accuracy for Decision Tree Classifier: {dt_avg_accuracy:.2f}")
