@@ -9,6 +9,7 @@ import re
 from sklearn.linear_model import Lasso
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 # Load the TSV data
 data_path = '../processed_datasets/tsv_data_horizontal/complex_test.tsv'
@@ -99,6 +100,7 @@ def cross_validate_model(model, X, y, k=5, is_regression=False):
     average_accuracy = sum(accuracies) / k
     return average_accuracy
 
+
 #-----------------Logistic Regression Cross-Validation-----------------
 print("\nLogistic Regression Cross-Validation:")
 logistic_model = LogisticRegression()
@@ -113,8 +115,23 @@ lasso_model = Lasso(alpha=0.1)
 lasso_avg_accuracy = cross_validate_model(lasso_model, similarities, labels, k=5, is_regression=True)
 print(f"Average Accuracy for Lasso Regression: {lasso_avg_accuracy:.2f}")
 
+
 #-----------------Decision Tree Cross-Validation-----------------
 print("\nDecision Tree Cross-Validation:")
 decision_tree_model = DecisionTreeClassifier(random_state=42)
 decision_tree_avg_accuracy = cross_validate_model(decision_tree_model, similarities, labels, k=5)
 print(f"Average Accuracy for Decision Tree: {decision_tree_avg_accuracy:.2f}")
+
+
+#-----------------Support Vector Machine-----------------
+print("\nSupport Vector Machine Cross-Validation:")
+svm_model = SVC(kernel='linear')
+svm_avg_accuracy = cross_validate_model(svm_model, similarities, labels, k=5)
+print(f"Average Accuracy for Support Vector Machine: {svm_avg_accuracy:.2f}")
+
+
+#-----------------Random Forest-----------------
+print("\nRandom Forest Cross-Validation:")
+random_forest_model = RandomForestClassifier(random_state=42)
+random_forest_avg_accuracy = cross_validate_model(random_forest_model, similarities, labels, k=5)
+print(f"Average Accuracy for Random Forest: {random_forest_avg_accuracy:.2f}")
