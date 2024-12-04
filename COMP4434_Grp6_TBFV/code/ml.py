@@ -49,7 +49,6 @@ print("Sample table text:", table_texts[0])
 print("Sample statement:", statements[0])
 print("Sample label:", labels[0])
 
-
 #-----------------TF-IDF Feature Extraction -----------------
 vectorizer = TfidfVectorizer(max_features=500)
 table_features = vectorizer.fit_transform(table_texts)
