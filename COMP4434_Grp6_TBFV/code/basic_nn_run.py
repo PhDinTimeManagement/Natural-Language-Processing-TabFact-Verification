@@ -211,8 +211,13 @@ def train_model(model, train_dataset_embeddings, val_dataset_embeddings, device,
     
     return model
 
-load_model = 'model.pth'
-model.load_state_dict(torch.load(load_model))
+import os
+
+model_path = 'model.pth'
+if os.path.exists(model_path):
+    model = model.load_state_dict(torch.load(model_path))
+else:
+    model = train_model(model, train_dataset_embeddings, val_dataset_embeddings, device)
 
 # Evaluate the model
 
