@@ -5,20 +5,31 @@ from sklearn.model_selection import train_test_split, KFold
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 import re
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lasso, LogisticRegression
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from gensim.models import Word2Vec
+import torch
 
 # Load the TSV data
-data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
+data_path = '../dataset/tsv_data_horizontal/train.tsv'
 data = pd.read_csv(data_path, sep='\t', header=None).values
-
+# Load data for BERT-extracted feature
+statement_features_path = r"../dataset/bert_feature_data/statement_features_train.npy"
+table_features_path = r"../dataset/bert_feature_data/table_feature_train.npy"
+labels_path = r"../dataset/bert_feature_data/labels_train.npy"
 
 #-----------------Data Preprocessing-----------------
 # Clean 'row x is:' in table
 def clean_out_sub_table(tsv_data):
-    table_texts_first = [" ".join(row[2:-2]) for row in tsv_data]
+    #table_texts_first = [" ".join(row[3:-2]) for row in tsv_data]
+    table_texts_first = []
+    for row in tsv_data:
+        row[3] = re.sub(r'\(.*?\)','',str(row[3]))
+        if row[3] != 'nan':
+            table_texts_first.append(" ".join(row[2:-2]))
+        else:
+            table_texts_first.append(row[2])
     table_texts_second = [re.sub(r'\. (.*?) :', ',', row) for row in table_texts_first]
     # print(table_texts_second[0])
     table_texts_final = []
@@ -54,10 +65,39 @@ vectorizer = TfidfVectorizer(max_features=500)
 table_features = vectorizer.fit_transform(table_texts)
 statement_features = vectorizer.transform(statements)
 
+#---------------Data Processing for BERT-extracted features--------------
+# Load data from npy file
+bert_statement_features  = np.load(statement_features_path)
+bert_table_features = np.load(table_features_path)
+bert_labels = np.load(labels_path,allow_pickle=True)
+
+# Convert numpy array to tensor
+table_features_tensor = torch.from_numpy(bert_table_features)
+statement_features_tensor = torch.from_numpy(bert_statement_features)
+
+# Reshape both features
+statement_features_reshape = statement_features_tensor.reshape(360932,-1)
+table_features_reshape = table_features_tensor.reshape(360932,-1)
+
 
 #-----------------Cosine Similarity Calculation-----------------
 # Combine features by calculating similarity
 similarities = cosine_similarity(table_features, statement_features)
+
+# Calculate Cosine similarity of table and statement after reshaping for BERT-extracted features
+cos_1 = torch.nn.CosineSimilarity(dim=1)
+output1 = cos_1(statement_features_reshape,table_features_reshape)
+
+
+#-----------------Post Cosine Similarity Data Processing for BERT-extracted Features--------------
+#Convert the tensor back to numpy array again
+numpy_cosine_sim = output1.numpy()
+
+# Concatenate feature after cosine-similarity calculate with labels
+stacked = np.vstack((numpy_cosine_sim, labels))  # Transpose to get the desired shape
+
+# Convert to the desired structure
+dataset = stacked.T  # Transpose back to get the final result
 
 
 # # -----------------Word2Vec Embedding Training-----------------
@@ -148,15 +188,26 @@ lasso_avg_accuracy = cross_validate_model(lasso_model, similarities, labels, k=5
 print(f"Average Accuracy for Lasso Regression: {lasso_avg_accuracy:.2f}")
 
 
-#-----------------Support Vector Machine-----------------
-print("\nSupport Vector Machine Cross-Validation:")
-svm_model = SVC(kernel='linear')
-svm_avg_accuracy = cross_validate_model(svm_model, similarities, labels, k=5)
-print(f"Average Accuracy for Support Vector Machine: {svm_avg_accuracy:.2f}")
+# #-----------------Support Vector Machine-----------------
+# print("\nSupport Vector Machine Cross-Validation:")
+# svm_model = SVC(kernel='linear')
+# svm_avg_accuracy = cross_validate_model(svm_model, similarities, labels, k=5)
+# print(f"Average Accuracy for Support Vector Machine: {svm_avg_accuracy:.2f}")
+#
+#
+# #-----------------Decision Tree Classifier-----------------
+# print("\nDecision Tree Classifier Cross-Validation:")
+# dt_model = DecisionTreeClassifier()
+# dt_avg_accuracy = cross_validate_model(dt_model, similarities, labels, k=5)
+# print(f"Average Accuracy for Decision Tree Classifier: {dt_avg_accuracy:.2f}")
+#
+#
+#-----------------BERT-extracted Feature Logistic Regression------------
 
+# Separate features and labels
+X = dataset[:, :-1]  # Features - all rows, all columns except the last
+y = dataset[:, -1].astype(int).reshape(-1)   # Labels - all rows, only the last column
 
-#-----------------Decision Tree Classifier-----------------
-print("\nDecision Tree Classifier Cross-Validation:")
-dt_model = DecisionTreeClassifier()
-dt_avg_accuracy = cross_validate_model(dt_model, similarities, labels, k=5)
-print(f"Average Accuracy for Decision Tree Classifier: {dt_avg_accuracy:.2f}")
+clf = LogisticRegression(max_iter = 1000)
+lg_avg_accuracy = cross_validate_model(clf, X, y, k=5, is_regression=True)
+print(f"Average Accuracy for Logistic Regression Classifier: {lg_avg_accuracy:.2f}")
