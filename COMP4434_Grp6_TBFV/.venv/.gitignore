@@ -1,4 +1,5 @@
 # Do not push .DS_Store files to the repository
 .DS_Store
 
-
+# Do not push /bert_feature_data to the repository
+../dataset/bert_feature_data
