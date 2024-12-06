@@ -2,4 +2,9 @@
 .DS_Store
 
 # Do not push /bert_feature_data to the repository
-dataset/bert_feature_data
+dataset/bert_feature_data/labels.npy
+dataset/bert_feature_data/labels_train.npy
+dataset/bert_feature_data/statement_features.npy
+dataset/bert_feature_data/statement_features_train.npy
+dataset/bert_feature_data/table_feature.npy
+dataset/bert_feature_data/table_feature_train.npy
