@@ -84,13 +84,12 @@ table_features_reshape = table_features_tensor.reshape(360932,-1)
 # Combine features by calculating similarity
 similarities = cosine_similarity(table_features, statement_features)
 
-# Calculate Cosine similarity of table and statement after reshaping for BERT-extracted features
-cos_1 = torch.nn.CosineSimilarity(dim=1)
-output1 = cos_1(statement_features_reshape,table_features_reshape)
-
 
 #-----------------Post Cosine Similarity Data Processing for BERT-extracted Features--------------
 #Convert the tensor back to numpy array again
+# Calculate Cosine similarity of table and statement after reshaping for BERT-extracted features
+cos_1 = torch.nn.CosineSimilarity(dim=1)
+output1 = cos_1(statement_features_reshape,table_features_reshape)
 numpy_cosine_sim = output1.numpy()
 
 # Concatenate feature after cosine-similarity calculate with labels
@@ -208,6 +207,7 @@ print(f"Average Accuracy for Lasso Regression: {lasso_avg_accuracy:.2f}")
 X = dataset[:, :-1]  # Features - all rows, all columns except the last
 y = dataset[:, -1].astype(int).reshape(-1)   # Labels - all rows, only the last column
 
+#-----------------Logistic Regression Classifier-----------------
 clf = LogisticRegression(max_iter = 1000)
 lg_avg_accuracy = cross_validate_model(clf, X, y, k=5, is_regression=True)
 print(f"Average Accuracy for Logistic Regression Classifier: {lg_avg_accuracy:.2f}")
