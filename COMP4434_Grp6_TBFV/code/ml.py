@@ -13,7 +13,7 @@ from sklearn.tree import DecisionTreeClassifier
 from gensim.models import Word2Vec
 
 # Load the TSV data
-data_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
+data_path = '../dataset/tsv_data_horizontal/train.tsv'
 complex_test_path = '../dataset/tsv_data_horizontal/complex_test.tsv'
 simple_test_path = '../dataset/tsv_data_horizontal/simple_test.tsv'
 small_test_path = '../dataset/tsv_data_horizontal/small_test.tsv'
