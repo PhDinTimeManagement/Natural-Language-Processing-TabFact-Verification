@@ -99,42 +99,42 @@ stacked = np.vstack((numpy_cosine_sim, labels))  # Transpose to get the desired 
 dataset = stacked.T  # Transpose back to get the final result
 
 
-# # -----------------Word2Vec Embedding Training-----------------
-# # Preprocess table_texts and statements into tokenized lists
-# tokenized_table_texts = [text.split() for text in table_texts]
-# tokenized_statements = [text.split() for text in statements]
-#
-# # Train a Word2Vec model
-# w2v_model = Word2Vec(sentences=tokenized_table_texts + tokenized_statements, vector_size=50, window=5, min_count=1, workers=4)
-#
-#
-# # -----------------Feature Extraction with Word2Vec-----------------
-# def get_average_word2vec(texts, model, vector_size):
-#     """
-#     Convert each text into a vector by averaging the Word2Vec embeddings of its words.
-#
-#     Parameters:
-#     texts: List of tokenized texts.
-#     model: Trained Word2Vec model.
-#     vector_size: Size of the word embeddings.
-#
-#     Returns:
-#     Array of vectors representing each text.
-#     """
-#     features = np.zeros((len(texts), vector_size))
-#     for i, tokens in enumerate(texts):
-#         word_vectors = [model.wv[word] for word in tokens if word in model.wv]
-#         if word_vectors:
-#             features[i] = np.mean(word_vectors, axis=0)  # Average embeddings
-#     return features
-#
-# # Generate Word2Vec features for tables and statements
-# table_features_w2v = get_average_word2vec(tokenized_table_texts, w2v_model, vector_size=50)
-# statement_features_w2v = get_average_word2vec(tokenized_statements, w2v_model, vector_size=50)
-#
-# # -----------------Feature Combination-----------------
-# # Combine table and statement features
-# similarities = np.hstack([table_features_w2v, statement_features_w2v])
+# -----------------Word2Vec Embedding Training-----------------
+# Preprocess table_texts and statements into tokenized lists
+tokenized_table_texts = [text.split() for text in table_texts]
+tokenized_statements = [text.split() for text in statements]
+
+# Train a Word2Vec model
+w2v_model = Word2Vec(sentences=tokenized_table_texts + tokenized_statements, vector_size=50, window=5, min_count=1, workers=4)
+
+
+# -----------------Feature Extraction with Word2Vec-----------------
+def get_average_word2vec(texts, model, vector_size):
+    """
+    Convert each text into a vector by averaging the Word2Vec embeddings of its words.
+
+    Parameters:
+    texts: List of tokenized texts.
+    model: Trained Word2Vec model.
+    vector_size: Size of the word embeddings.
+
+    Returns:
+    Array of vectors representing each text.
+    """
+    features = np.zeros((len(texts), vector_size))
+    for i, tokens in enumerate(texts):
+        word_vectors = [model.wv[word] for word in tokens if word in model.wv]
+        if word_vectors:
+            features[i] = np.mean(word_vectors, axis=0)  # Average embeddings
+    return features
+
+# Generate Word2Vec features for tables and statements
+table_features_w2v = get_average_word2vec(tokenized_table_texts, w2v_model, vector_size=50)
+statement_features_w2v = get_average_word2vec(tokenized_statements, w2v_model, vector_size=50)
+
+# -----------------Feature Combination-----------------
+# Combine table and statement features
+similarities = np.hstack([table_features_w2v, statement_features_w2v])
 
 
 #-----------------Prepare training and testing data-----------------

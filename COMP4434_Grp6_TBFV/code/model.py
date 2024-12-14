@@ -50,7 +50,7 @@ device = torch.device('cpu')
 if not os.path.exists(args.output_dir):
     os.mkdir(args.output_dir)
 
-with open('../preprocessed_data_program/vocab.json') as f:
+with open('../dataset/preprocessed_data_programpython run_BERT.py --do_train --do_eval --scan horizontal --fact [first/vocab.json') as f:
     vocab = json.load(f)
 
 ivocab = {w: k for k, w in vocab.items()}

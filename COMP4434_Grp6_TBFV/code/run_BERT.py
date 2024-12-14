@@ -16,6 +16,9 @@
 """BERT finetuning runner."""
 
 from __future__ import absolute_import, division, print_function
+
+from transformers import RobertaTokenizer, RobertaForSequenceClassification
+
 from collections import OrderedDict
 import argparse
 import csv
@@ -522,9 +525,13 @@ def main():
     else:
         load_dir = args.bert_model
 
-    model = BertForSequenceClassification.from_pretrained(load_dir,
-                                                          cache_dir=cache_dir,
-                                                          num_labels=num_labels)
+    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+    model = RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=num_labels)
+
+    # model = BertForSequenceClassification.from_pretrained(load_dir,
+    #                                                       cache_dir=cache_dir,
+    #                                                       num_labels=num_labels)
+
     if args.fp16:
         model.half()
     model.to(device)
@@ -604,7 +611,9 @@ def main():
                 input_ids, input_mask, segment_ids, label_ids = batch
 
                 # define a new function to compute loss values for both output_modes
-                logits = model(input_ids, segment_ids, input_mask, labels=None)
+                # logits = model(input_ids, segment_ids, input_mask, labels=None)
+                outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=None, labels=None)
+                logits = outputs.logits  # Extract logits tensor from the output object
 
                 if output_mode == "classification":
                     loss_fct = CrossEntropyLoss()
@@ -728,7 +737,8 @@ def evaluate(args, model, device, processor, label_list, num_labels, tokenizer, 
             label_ids = label_ids.to(device)
 
             with torch.no_grad():
-                logits = model(input_ids, segment_ids, input_mask, labels=None)
+                outputs = model(input_ids=input_ids, attention_mask=input_mask, token_type_ids=None, labels=None)
+                logits = outputs.logits  # Extract logits tensor from the output object
 
             # create eval loss and other metric required by the task
             if output_mode == "classification":
